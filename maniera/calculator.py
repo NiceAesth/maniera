@@ -1,3 +1,5 @@
+# calculator.py
+
 import re
 import math
 
@@ -8,7 +10,7 @@ section_regex = re.compile(r"\[(.*)\]")
 class Maniera:
 
     def __init__(self, osupath, mods, score):
-
+        """Initialize Maniera calculator."""
         self.osupath = osupath
         self.mods = mods
         self.score = score
@@ -23,7 +25,7 @@ class Maniera:
         self.__parseBeatmapFile()
 
     def __parseNote(self, line):
-
+        """Parse a note text into a note dict. (Internal use)."""
         m = re.match(note_regex, line)
         try:
             x = float( m.group(1) )
@@ -45,7 +47,7 @@ class Maniera:
             pass
 
     def __parseBeatmapFile(self):
-
+        """Parse a beatmap file and set class variables. (Internal use)."""
         with open(self.osupath) as bmap:
             textContent = bmap.read()
             lines = textContent.splitlines()
@@ -76,7 +78,7 @@ class Maniera:
         self.note_count = len(self.notes)
 
     def __calculateStars(self):
-
+        """Calculate star rating. (Internal use)."""
         time_scale = 1
 
         if self.mods & 64:
@@ -158,7 +160,7 @@ class Maniera:
         return difficulty * star_scaling_factor
 
     def __calculatePP(self):
-
+        """Calculate PP. To be run only after __calculateStars. (Internal use)."""
         score_rate = 1
 
         if self.mods & 1: # NF
@@ -198,5 +200,6 @@ class Maniera:
 
 
     def calculate(self):
+        """Calculates PP and star rating."""
         self.sr = self.__calculateStars()
         self.pp = self.__calculatePP()
