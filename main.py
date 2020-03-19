@@ -20,7 +20,7 @@ class Maniera:
         self.pp = 0
         self.sr = 0
 
-        self.parseBeatmapFile()
+        self.__parseBeatmapFile()
 
     def __parseNote(self, line):
 
@@ -44,7 +44,7 @@ class Maniera:
         except:
             pass
 
-    def parseBeatmapFile(self):
+    def __parseBeatmapFile(self):
 
         with open(self.osupath) as bmap:
             textContent = bmap.read()
@@ -167,7 +167,7 @@ class Maniera:
             score_rate *= 0.5
         if self.mods & 256: # HT
             score_rate *=0.5
-        
+
         real_score = self.score / score_rate
 
         hit300_window = 34 + 3 * ( min( 10, max( 0, 10 - self.od ) ) )
@@ -185,7 +185,7 @@ class Maniera:
             strain_value *= (0.75 + (real_score - 800000) / 100000 * 0.15)
         else:
             strain_value *= (0.9 + (real_score - 900000) / 100000 * 0.1)
-        
+
         acc_value = max(0, 0.2 - ( (hit300_window - 34) * 0.006667 ) ) * strain_value * ( max(0, real_score - 960000) / 40000) ** 1.1
 
         pp_multiplier = 0.8
@@ -193,7 +193,7 @@ class Maniera:
             pp_multiplier *= 0.9
         if self.mods & 2: # EZ
             pp_multiplier *= 0.5
-        
+
         return (strain_value ** 1.1 + acc_value ** 1.1) ** (1 / 1.1) * pp_multiplier
 
 
