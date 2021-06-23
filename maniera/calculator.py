@@ -77,7 +77,7 @@ class Maniera:
         self.notes.sort(key=lambda note: note['start_t'])
         self.note_count = len(self.notes)
 
-    def __calculateStars(self):
+    def _calculateStars(self):
         """Calculate star rating. (Internal use)."""
         time_scale = 1
 
@@ -120,7 +120,7 @@ class Maniera:
 
             held_until[note['key']] = note['end_t']
 
-            note['individual_strain'][note['key']] += 2* hold_factor
+            note['individual_strain'][note['key']] += 2 * hold_factor
             note['overall_strain'] = previous_note['overall_strain'] * overall_decay + (1 + hold_addition) * hold_factor
 
             previous_note = note
@@ -159,7 +159,7 @@ class Maniera:
 
         return difficulty * star_scaling_factor
 
-    def __calculatePP(self):
+    def _calculatePP(self):
         """Calculate PP. To be run only after __calculateStars. (Internal use)."""
         score_rate = 1
 
@@ -201,5 +201,5 @@ class Maniera:
 
     def calculate(self):
         """Calculates PP and star rating."""
-        self.sr = self.__calculateStars()
-        self.pp = self.__calculatePP()
+        self.sr = self._calculateStars()
+        self.pp = self._calculatePP()
