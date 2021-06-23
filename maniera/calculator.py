@@ -1,90 +1,91 @@
 # calculator.py
 
-import re
 import math
 
-whitespace_regex = re.compile(r"\/\/.*")
-note_regex = re.compile(r"(\d+),\d+,(\d+),\d+,\d+,(\d+)")
-section_regex = re.compile(r"\[(.*)\]")
-
 class Maniera:
+    __slots__ = ('osupath', 'mods', 'score', 'od', 'keys', 'notes', 'pp', 'sr')
 
-    def __init__(self, osupath, mods, score):
+    def __init__(self, osupath: str, mods: int, score: int) -> None:
         """Initialize Maniera calculator."""
         self.osupath = osupath
         self.mods = mods
         self.score = score
-        self.gamemode = 3
         self.od = 0
         self.keys = 0
         self.notes = []
-        self.note_count = 0
-        self.pp = 0
-        self.sr = 0
+        self.pp = 0.0
+        self.sr = 0.0
 
         self.__parseBeatmapFile()
 
-    def __parseNote(self, line):
+    def __parseNote(self, line: str) -> dict[str, object]:
         """Parse a note text into a note dict. (Internal use)."""
-        m = re.match(note_regex, line)
-        try:
-            x = float( m.group(1) )
-            start_t = float( m.group(2) )
-            end_t = float( m.group(3) )
-            key = math.floor( x * self.keys / 512 )
+        m = line.split(',')
+        if len(m) != 6:
+            return
 
-            if not end_t:
-                end_t = start_t
+        x = float(m[0])
+        start_t = float(m[2])
+        end_t = float(m[5].split(':', 1)[0])
+        if not end_t:
+            end_t = start_t
 
-            return {
-                'key': key,
-                'start_t': start_t,
-                'end_t': end_t,
-                'overall_strain': 1,
-                'individual_strain': [0] * self.keys
-            }
-        except:
-            pass
+        return {
+            'key': math.floor( x * self.keys / 512 ),
+            'start_t': start_t,
+            'end_t': end_t,
+            'overall_strain': 1,
+            'individual_strain': [0] * self.keys
+        }
 
-    def __parseBeatmapFile(self):
+    def __parseBeatmapFile(self) -> None:
         """Parse a beatmap file and set class variables. (Internal use)."""
         with open(self.osupath) as bmap:
             textContent = bmap.read()
             lines = textContent.splitlines()
 
         section_name = ""
+
         for line in lines:
-
-            if line == "" or re.match(whitespace_regex, line):
+            if not line or line[:2] == "//":
                 continue
 
-            m = re.match(section_regex, line)
-            if m:
-                section_name = m.group(1)
+            if line[0] == "[" and line[-1] == "]":
+                section_name = line[1:-1]
                 continue
 
-            if section_name == "Difficulty":
-                if re.match(r"CircleSize:(.*)", line):
-                    self.keys = int( re.match(r"CircleSize:(.*)", line).group(1) )
-                if re.match(r"OverallDifficulty:(.*)", line):
-                    self.od = float( re.match(r"OverallDifficulty:(.*)", line).group(1) )
+            if section_name == "General":
+                key, val = line.split(':', maxsplit=1)
+                if key == 'Mode' and val.lstrip() != '3':
+                    raise RuntimeError('Maniera does not converted maps.')
 
-            if section_name == "HitObjects":
+            elif section_name == "Difficulty":
+                key, val = line.split(':', maxsplit=1)
+                if key == 'CircleSize':
+                    self.keys = int(val.lstrip())
+                elif key == 'OverallDifficulty':
+                    self.od = float(val.lstrip())
+
+            elif section_name == "HitObjects":
                 note = self.__parseNote(line)
                 if note:
                     self.notes.append(note)
 
         self.notes.sort(key=lambda note: note['start_t'])
-        self.note_count = len(self.notes)
 
-    def _calculateStars(self):
+    def _calculateStars(self) -> float:
         """Calculate star rating. (Internal use)."""
-        time_scale = 1
+        # NOTE: make sure this is called before _calculatePP
 
-        if self.mods & 64:
+        if not self.notes:
+            return
+
+        if self.mods & 64: # DT
             time_scale = 1.5
-        if self.mods & 256:
+        elif self.mods & 256: # HT
             time_scale = 0.75
+        else:
+            time_scale = 1.0
 
         # Constants
         strain_step = 400 * time_scale
@@ -95,14 +96,9 @@ class Maniera:
 
         # Get strain of each note
         held_until = [0] * self.keys
-        previous_note = None
+        previous_note = self.notes[0]
 
-        for note in self.notes:
-
-            if not previous_note:
-                previous_note = note
-                continue
-
+        for note in self.notes[1:]:
             time_elapsed = (note['start_t'] - previous_note['start_t']) / time_scale / 1000
             individual_decay = individual_decay_base ** time_elapsed
             overall_decay = overall_decay_base ** time_elapsed
@@ -159,21 +155,21 @@ class Maniera:
 
         return difficulty * star_scaling_factor
 
-    def _calculatePP(self):
-        """Calculate PP. To be run only after __calculateStars. (Internal use)."""
-        score_rate = 1
+    def _calculatePP(self) -> float:
+        """Calculate PP. To be run only after _calculateStars. (Internal use)."""
+        score_rate = 1.0
 
         if self.mods & 1: # NF
             score_rate *= 0.5
         if self.mods & 2: # EZ
             score_rate *= 0.5
         if self.mods & 256: # HT
-            score_rate *=0.5
+            score_rate *= 0.5
 
         real_score = self.score / score_rate
 
         hit300_window = 34 + 3 * ( min( 10, max( 0, 10 - self.od ) ) )
-        strain_value = (5 * max(1, self.sr / 0.2) - 4) ** 2.2 / 135 * (1 + 0.1 * min(1, self.note_count / 1500))
+        strain_value = (5 * max(1, self.sr / 0.2) - 4) ** 2.2 / 135 * (1 + 0.1 * min(1, len(self.notes) / 1500))
 
         if real_score <= 500000:
             strain_value = 0
@@ -198,8 +194,7 @@ class Maniera:
 
         return (strain_value ** 1.1 + acc_value ** 1.1) ** (1 / 1.1) * pp_multiplier
 
-
-    def calculate(self):
+    def calculate(self) -> None:
         """Calculates PP and star rating."""
         self.sr = self._calculateStars()
         self.pp = self._calculatePP()
