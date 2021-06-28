@@ -7,7 +7,7 @@ with open('README.md', encoding="utf-8") as f:
 # This call to setup() does all the work
 setup(
     name="maniera",
-    version="1.0.0",
+    version="1.0.2",
     description="An osu! Mania PP and star rating calculator.",
     long_description=README,
     long_description_content_type="text/markdown",
