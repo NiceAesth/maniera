@@ -1,3 +1,5 @@
+# I SUGGEST YOU TAKE A LOOK AT MY OTHER PROJECT https://github.com/NiceAesth/aiosu WHICH NOW HAS ALL MODE PP CALCULATION
+
 # 🎹 Maniera
 ## osu! Mania PP calculator written in Python.
 Written with ❤️ by [Nice Aesthetics](https://aesth.dev). Based on [ompp-web](https://github.com/toxicpie/ompp-web)
